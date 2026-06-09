@@ -1,68 +1,67 @@
 # ============================================================
-#  ОБЛЁТ ВОКРУГ ТОЧКИ — рендер кадров для видео
-#  SketchUp Ruby Console:  выдели линию, вставь этот файл,
-#  Enter. Камера облетит конец линии на 360° и сохранит кадры.
+#  ОБЛЁТ ВОКРУГ ВЕРТИКАЛЬНОЙ ОСИ  (плавно, в реальном времени)
+#
+#  1) Выдели линию (камера будет крутиться вокруг вертикальной
+#     оси через её конец, сохраняя текущий угол наклона).
+#  2) Поставь камеру как хочешь видеть здание (угол/высота/зум).
+#  3) Window -> Ruby Console, вставь этот файл, Enter.
+#  4) Снимай экран рекордером:  Win+Alt+R (Xbox Game Bar)  или OBS.
+#
+#  ОСТАНОВИТЬ в любой момент — впиши в консоль:
+#     ArchOrbit.stop
+#  (или просто крутни сцену мышью / нажми другой инструмент)
 # ============================================================
 
 module ArchOrbit
   # -------- НАСТРОЙКИ --------
-  FRAMES   = 180                                   # кадров на полный круг (180 = 6 c при 30 fps)
-  WIDTH    = 1920
-  HEIGHT   = 1080
-  OUT_DIR  = "C:/dev/arch-flythrough/orbit_frames" # куда складывать PNG
-  USE_END  = :start                                # какой конец линии — :start или :end
-  CW       = false                                 # направление: false = против часовой
+  SPEED_DEG = 0.4    # градусов за кадр (меньше = медленнее и плавнее)
+  TURNS     = 0      # сколько полных кругов; 0 = бесконечно (стоп вручную)
+  USE_END   = :start # центр оси: конец линии :start или :end
+  CW        = false  # true = по часовой
   # ---------------------------
+
+  class Orbit
+    def initialize(center, step)
+      @center = center
+      @step   = step
+      @done   = 0.0
+    end
+
+    # SketchUp вызывает это каждый кадр сам, с максимальной плавностью
+    def nextFrame(view)
+      cam = view.camera
+      tr  = Geom::Transformation.rotation(@center, Z_AXIS, @step)
+      # поворачиваем и глаз, и цель вокруг ОСИ -> наклон камеры сохраняется
+      view.camera.set(cam.eye.transform(tr), cam.target.transform(tr), Z_AXIS)
+      view.show_frame
+      @done += @step.abs
+      if TURNS > 0 && @done >= TURNS * 360.degrees
+        ArchOrbit.stop
+        return false
+      end
+      true
+    end
+
+    def stop(view = nil); end
+  end
 
   def self.run
     model = Sketchup.active_model
-    view  = model.active_view
     sel   = model.selection
-
-    edge = sel.grep(Sketchup::Edge).first
+    edge  = sel.grep(Sketchup::Edge).first
     unless edge
       UI.messagebox("Выдели линию (Edge) и запусти снова.")
       return
     end
-
     center = (USE_END == :end) ? edge.end.position : edge.start.position
+    step   = (CW ? -SPEED_DEG : SPEED_DEG).degrees
+    model.active_view.animation = Orbit.new(center, step)
+    puts "Облёт пошёл. Снимай экран. Стоп:  ArchOrbit.stop"
+  end
 
-    require "fileutils"
-    FileUtils.mkdir_p(OUT_DIR)
-
-    cam = view.camera
-    # вектор от центра вращения к текущей позиции камеры — сохраняем радиус и высоту
-    vec = cam.eye - center
-    up  = Z_AXIS
-
-    sign = CW ? -1.0 : 1.0
-    digits = (FRAMES - 1).to_s.length
-
-    puts "Облёт: #{FRAMES} кадров вокруг #{center.inspect}"
-    FRAMES.times do |i|
-      angle = sign * (2 * Math::PI) * i / FRAMES
-      tr    = Geom::Transformation.rotation(center, Z_AXIS, angle)
-      eye   = center + vec.transform(tr)
-
-      view.camera.set(eye, center, up)
-      view.refresh
-
-      fname = File.join(OUT_DIR, "frame_%0#{digits}d.png" % i)
-      view.write_image(
-        :filename    => fname,
-        :width       => WIDTH,
-        :height      => HEIGHT,
-        :antialias   => true,
-        :transparent => false,
-        :compression => 0.9
-      )
-      print "\r  кадр #{i + 1}/#{FRAMES}"
-    end
-
-    # вернём камеру в исходное положение
-    view.camera.set(center + vec, center, up)
-    puts "\nГотово. Кадры тут: #{OUT_DIR}"
-    UI.messagebox("Снято #{FRAMES} кадров.\n#{OUT_DIR}\n\nДальше собери их в видео скриптом make_video.py")
+  def self.stop
+    Sketchup.active_model.active_view.animation = nil
+    puts "Остановлено."
   end
 end
 
