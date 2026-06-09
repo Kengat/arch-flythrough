@@ -1,3 +1,9 @@
 node_modules/
 .DS_Store
 *.log
+
+# Большой диплом-PDF держим локально, в GitHub не пушим (лимит 100 МБ/файл)
+DIPLOMA_Expo_Semester_8_task_main_compressed.pdf
+
+# Промежуточные кадры облёта (само видео video/flythrough.mp4 коммитим)
+orbit_frames/
