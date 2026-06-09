@@ -183,11 +183,25 @@ module ArchOrbit
     HTML
   end
 
-  # меню
-  unless @loaded
-    UI.menu("Extensions").add_item("Arch Orbit — панель") { show_panel }
+  # ---- кнопка на тулбаре + пункт меню (НИЧЕГО не открываем при старте) ----
+  unless defined?(@loaded) && @loaded
+    dir = File.dirname(__FILE__)
+    cmd = UI::Command.new("Arch Orbit") { show_panel }
+    cmd.tooltip          = "Arch Orbit — облёт камеры"
+    cmd.status_bar_text  = "Открыть панель облёта камеры вокруг оси"
+    ic16 = File.join(dir, "arch_orbit_assets", "orbit_16.png")
+    ic24 = File.join(dir, "arch_orbit_assets", "orbit_24.png")
+    if File.exist?(ic24)
+      cmd.small_icon = ic16
+      cmd.large_icon = ic24
+    end
+
+    tb = UI::Toolbar.new("Arch Orbit")
+    tb.add_item(cmd)
+    tb.restore   # показать тулбар (запоминает состояние между сессиями)
+
+    UI.menu("Extensions").add_item(cmd)
     @loaded = true
   end
 end
-
-ArchOrbit.show_panel  # открыть сразу при загрузке
+# Панель сама НЕ открывается — жми кнопку на тулбаре "Arch Orbit".
