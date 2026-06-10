@@ -9,3 +9,4 @@ DIPLOMA_Expo_Semester_8_task_main_compressed.pdf
 ffmpeg.exe
 recordings/
 *.mp4
+!video/flythrough.mp4
