@@ -4,3 +4,8 @@ node_modules/
 
 # Большой диплом-PDF держим локально, в GitHub не пушим (лимит 100 МБ/файл)
 DIPLOMA_Expo_Semester_8_task_main_compressed.pdf
+
+# рекордер и записи держим локально
+ffmpeg.exe
+recordings/
+*.mp4
